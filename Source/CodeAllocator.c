@@ -56,19 +56,24 @@ Result ctrlNextCodeAllocAddressLast(size_t numPages, u32* outAddr) {
 
     // Find free space in the region.
     MemInfo info;
-    u32 base = OS_HEAP_AREA_END - 1;
+    u32 base = OS_HEAP_AREA_END;
 
     while (base >= OS_HEAP_AREA_BEGIN) {
-        Result ret = ctrlQueryMemoryRegionBackwards(base, size, &info);
+        Result ret = ctrlQueryMemoryRegionBackwards(base - 1, size, &info);
         if (R_FAILED(ret))
             return ret;
 
         if (info.state == MEMSTATE_FREE && info.size >= size) {
-            *outAddr = info.base_addr;
+            // base = info.base_addr + info.size - size;
+            base = info.base_addr + info.size - size;
+            if (base > OS_HEAP_AREA_END - size)
+                base = OS_HEAP_AREA_END - size;
+            
+            *outAddr = base;
             return 0;
         }
 
-        base = info.base_addr - 1;
+        base = info.base_addr;
     }
 
     return ERR_NO_MEM;
