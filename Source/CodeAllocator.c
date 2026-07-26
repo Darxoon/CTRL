@@ -51,9 +51,32 @@ Result ctrlNextCodeAllocAddress(size_t numPages, u32* outAddr) {
     return ERR_NO_MEM;
 }
 
+Result ctrlNextCodeAllocAddressLast(size_t numPages, u32* outAddr) {
+    const size_t size = ctrlNumPagesToSize(numPages);
+
+    // Find free space in the region.
+    MemInfo info;
+    u32 base = OS_HEAP_AREA_END - 1;
+
+    while (base >= OS_HEAP_AREA_BEGIN) {
+        Result ret = ctrlQueryMemoryRegionBackwards(base, size, &info);
+        if (R_FAILED(ret))
+            return ret;
+
+        if (info.state == MEMSTATE_FREE && info.size >= size) {
+            *outAddr = info.base_addr;
+            return 0;
+        }
+
+        base = info.base_addr - 1;
+    }
+
+    return ERR_NO_MEM;
+}
+
 Result ctrlAllocCodePages(size_t numPages, u32* outAddr) {
     u32 base;
-    Result ret = ctrlNextCodeAllocAddress(numPages, &base);
+    Result ret = ctrlNextCodeAllocAddressLast(numPages, &base);
     if (R_FAILED(ret))
         return ret;
 

@@ -57,6 +57,27 @@ Result ctrlQueryMemoryRegion(u32 addr, MemInfo* memInfo) {
     return 0;
 }
 
+Result ctrlQueryMemoryRegionBackwards(u32 addr, size_t size, MemInfo* memInfo) {
+    Result ret = ctrlQueryMemory(addr, memInfo, NULL);
+    if (R_FAILED(ret))
+        return ret;
+
+    while (memInfo->size < size) {
+        MemInfo tmp;
+        ret = ctrlQueryMemory(memInfo->base_addr - 1, &tmp, NULL);
+        if (R_FAILED(ret))
+            return ret;
+
+        if ((tmp.perm != memInfo->perm) || (tmp.state != memInfo->state))
+            break;
+
+        tmp.size += memInfo->size;
+        *memInfo = tmp;
+    }
+
+    return 0;
+}
+
 Result ctrlChangeMemoryPerms(u32 addr, size_t size, MemPerm perms) {
     if (ctrlEnv() == Env_Citra)
         return 0;

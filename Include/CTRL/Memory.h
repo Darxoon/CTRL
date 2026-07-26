@@ -53,6 +53,15 @@ Result ctrlQueryMemory(u32 addr, MemInfo* memInfo, PageInfo* pageInfo);
 Result ctrlQueryMemoryRegion(u32 addr, MemInfo* memInfo);
 
 /**
+ * @brief Get informations about a range of pages, with same permission and state values.
+ * @param[in] addr Address within the range.
+ * @param[in] size Max byte size (rounded up) of the page range.
+ * @param[out] memInfo Range info.
+ * @return Result code.
+ */
+Result ctrlQueryMemoryRegionBackwards(u32 addr, size_t size, MemInfo* memInfo);
+
+/**
  * @brief Change permissions on a range of pages.
  * @param[in] addr Address.
  * @param[in] size Size.
