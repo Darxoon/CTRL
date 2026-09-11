@@ -31,7 +31,8 @@ static void logArgs(const char* msg, ...) {
 
 
 static Result findFreeRange(Handle proc, size_t numPages, size_t curIndex, size_t maxIndex, size_t* outPageIndex) {
-    u32 curAddr = ctrlPageIndexToAddr(curIndex);
+    u32 startAddr = ctrlPageIndexToAddr(curIndex);
+    u32 curAddr = startAddr;
 
     while (curAddr < ctrlPageIndexToAddr(maxIndex)) {
         MemInfo memInfo;
@@ -39,6 +40,15 @@ static Result findFreeRange(Handle proc, size_t numPages, size_t curIndex, size_
         if (R_FAILED(ret)) {
             logResult("ctrlQueryMemoryRegion failed", ret);
             return ret;
+        }
+
+        if (memInfo.base_addr < startAddr) {
+            if (memInfo.base_addr + memInfo.size >= startAddr) {
+                memInfo.size -= startAddr - memInfo.base_addr;
+                memInfo.base_addr = startAddr;
+            } else {
+                memInfo.state = -1;
+            }
         }
 
         logArgs("findFreeRange: %d %#x %#x\n", memInfo.state, memInfo.base_addr, memInfo.size);
