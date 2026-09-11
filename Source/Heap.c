@@ -4,16 +4,37 @@
  * See the LICENSE file for more info.
  */
 
+#include <3ds/svc.h>
 #include <CTRL/Heap.h>
 #include <CTRL/RingAllocator.h>
 #include <CTRL/Memory.h>
 #include <CTRL/App.h>
+#include <stdarg.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "Syscalls.h"
 
 #define ERR_NO_MEM MAKERESULT(RL_STATUS, RS_OUTOFRESOURCE, RM_OS, 0x0A)
 
 static CTRLRingAllocator g_HeapAllocator;
+
+static void logResult(const char* msg, Result res) {
+    char buf[0x100];
+    snprintf(buf, sizeof(buf), "setupHeapAllocator: %s (%d %d)\n", msg, R_SUMMARY(res), R_DESCRIPTION(res));
+    svcOutputDebugString(buf, strlen(buf));
+}
+
+static void logArgs(const char* msg, ...) {
+    va_list args;
+    va_start(args, msg);
+    
+    char buf[0x100];
+    vsnprintf(buf, sizeof(buf), msg, args);
+    
+    va_end(args);
+    svcOutputDebugString(buf, strlen(buf));
+}
 
 static Result setupHeapAllocator(void) {
     extern u32 __ctru_heap;
@@ -36,8 +57,12 @@ static Result setupHeapAllocator(void) {
         MemInfo memInfo;
         PageInfo pageInfo;
         const Result ret = svcQueryMemory(&memInfo, &pageInfo, curAddr);
-        if (R_FAILED(ret))
+        if (R_FAILED(ret)) {
+            logResult("svcQueryMemory failed", ret);
             return ret;
+        }
+
+        logArgs("setupHeapAllocator: %#x %d\n", memInfo.base_addr, memInfo.state);
 
         if (memInfo.state == MEMSTATE_FREE) {
             // Check if we have a free range within the heap area.
@@ -56,8 +81,10 @@ static Result setupHeapAllocator(void) {
         curAddr = memInfo.base_addr + memInfo.size;
     }
 
-    if (!heapBase || heapBase > OS_HEAP_AREA_END)
+    if (!heapBase || heapBase > OS_HEAP_AREA_END) {
+        logResult("heapBase couldn't be set", ERR_NO_MEM);
         return ERR_NO_MEM;
+    }
 
     // Find consecutive pages.
     curAddr = heapBase;
@@ -68,8 +95,10 @@ static Result setupHeapAllocator(void) {
         MemInfo memInfo;
         PageInfo pageInfo;
         const Result ret = svcQueryMemory(&memInfo, &pageInfo, curAddr);
-        if (R_FAILED(ret))
+        if (R_FAILED(ret)) {
+            logResult("svcQueryMemory failed2", ret);
             return ret;
+        }
 
         if (memInfo.state != MEMSTATE_FREE)
             break;
@@ -81,8 +110,10 @@ static Result setupHeapAllocator(void) {
         curAddr = heapBase + heapSize;
     }
 
-    if (!heapSize)
+    if (!heapSize) {
+        logResult("heapSize couldn't be set", ERR_NO_MEM);
         return ERR_NO_MEM;
+    }
 
 #if defined(CTRL_CFG_HEAP_SIZE)
     size_t wantedSize = ctrlAlignUp(CTRL_CFG_HEAP_SIZE, CTRL_PAGE_SIZE);
