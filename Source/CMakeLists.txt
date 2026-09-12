@@ -14,7 +14,7 @@ set(CTRL_SOURCES
 
 add_library(CTRL STATIC ${CTRL_SOURCES})
 target_include_directories(CTRL PUBLIC ../Include)
-target_compile_options(CTRL PRIVATE -O2 -Wall -Wno-switch)
+target_compile_options(CTRL PRIVATE -Wall -Wno-switch)
 
 if (CTRL_CFG_HEAP_OFFSET)
     target_compile_definitions(CTRL PUBLIC -DCTRL_CFG_HEAP_OFFSET=${CTRL_CFG_HEAP_OFFSET})

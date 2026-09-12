@@ -8,6 +8,9 @@
 #include <CTRL/RingAllocator.h>
 #include <CTRL/Memory.h>
 #include <CTRL/App.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 static size_t maxPageForCodeBase(size_t pageBase) {
     const u32 CODE_START = 0x100000;
@@ -44,6 +47,17 @@ static size_t maxPageForCodeBase(size_t pageBase) {
 #endif // CTRL_CFG_EXEC_SIZE
 }
 
+static void logArgs(const char* msg, ...) {
+    va_list args;
+    va_start(args, msg);
+    
+    char buf[0x100];
+    vsnprintf(buf, sizeof(buf), msg, args);
+    
+    va_end(args);
+    svcOutputDebugString(buf, strlen(buf));
+}
+
 Result ctrlReserveCodePages(size_t numPages, size_t* outPageIndex) {
     static size_t offset = 0;
 
@@ -59,6 +73,8 @@ Result ctrlReserveCodePages(size_t numPages, size_t* outPageIndex) {
     codeAllocator.max = maxPageForCodeBase(codeAllocator.base);
     codeAllocator.offset = offset;
 
+    logArgs("ctrlReserveCodePages: %#x %#x %#x\n", ctrlAppSectionInfo()->textAddr, ctrlPageIndexToAddr(codeAllocator.max), offset);
+    
     const Result ret = ctrlRingAllocatorReservePages(&codeAllocator, numPages, outPageIndex);
     if (R_SUCCEEDED(ret))
         offset = codeAllocator.offset;
